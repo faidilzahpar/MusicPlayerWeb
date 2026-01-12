@@ -142,7 +142,14 @@ namespace MusicPlayerWeb.Controllers
             }
 
             // 2. Ambil File Fisik (.mp3) dari Disk
-            var filesOnDisk = Directory.GetFiles(path, "*.mp3", SearchOption.AllDirectories);
+            // Daftar ekstensi yang didukung Browser & TagLib
+            var validExtensions = new[] { ".mp3", ".m4a", ".wav", ".ogg", ".flac" };
+
+            // Ambil semua file, lalu filter berdasarkan ekstensi (Case Insensitive)
+            var filesOnDisk = Directory
+                .EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
+                .Where(file => validExtensions.Contains(Path.GetExtension(file).ToLower()))
+                .ToList();
 
             // Gunakan HashSet Case-Insensitive agar akurat di Windows
             var filesOnDiskSet = new HashSet<string>(filesOnDisk, StringComparer.OrdinalIgnoreCase);
