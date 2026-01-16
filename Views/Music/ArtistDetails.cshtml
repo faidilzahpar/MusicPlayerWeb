@@ -112,10 +112,12 @@
                     foreach (var song in Model.Songs)
                     {
                         <div class="song-list-item"
-                             onclick="playStream(@song.Id,
-                                                     '@song.Title.Replace("'", "\\'")',
-                                                     '@(song.Artist?.Name?.Replace("'", "\\'") ?? "Unknown")',
-                                                     '/Music/GetAlbumArt/@song.Id'); highlightSong(this);">
+                             data-id="@song.Id"
+                             data-title="@song.Title"
+                             data-artist="@(song.Artist?.Name ?? "Unknown")"
+                             data-cover="/Music/GetAlbumArt/@song.Id"
+                             data-url="/Music/PlayStream?id=@song.Id"
+                             onclick="playFromQueue(this)">    
 
                             <div style="padding-left: 10px;">
                                 <div class="list-cover-box">
