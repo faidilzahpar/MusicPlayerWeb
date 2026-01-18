@@ -918,6 +918,8 @@
         const queueOverlay = document.getElementById('queueOverlay');
         const queueListContent = document.getElementById('queueListContent');
         let isQueueOpen = false;
+        // Variabel untuk menyimpan data YouTube yang sedang diklik kanan
+        let activeYoutubeData = null;
 
         // --- STATE MANAGEMENT ---
         let playlist = [];       // Menyimpan daftar lagu saat ini
@@ -1443,18 +1445,10 @@
             document.getElementById('ctxPlaylistItems').innerHTML =
                 `<div style="padding:8px 12px; color:#6F7A95; font-size:12px;">Hover to load...</div>`;
 
-            // Positioning Logic
-            let x = event.clientX;
-            let y = event.clientY;
-            const menuWidth = 220;
-            const menuHeight = 300;
-
-            if (x + menuWidth > window.innerWidth) x -= menuWidth;
-            if (y + menuHeight > window.innerHeight) y -= menuHeight;
-
-            ctxMenu.style.top = `${y}px`;
-            ctxMenu.style.left = `${x}px`;
-            ctxMenu.style.display = 'block';
+            // --- BAGIAN YANG DIUBAH (HANYA INI) ---
+            // HAPUS kode perhitungan manual lama (x, y, menuWidth, menuHeight)
+            // GANTI dengan:
+            setMenuPosition(event.clientX, event.clientY);
 
             // Submenu Flip Logic
             const submenu = document.getElementById('ctxPlaylistSubmenu');
@@ -1517,69 +1511,142 @@
             }
         }
 
-        function menuAction(action) {
-            ctxMenu.style.display = 'none'; // Tutup menu langsung biar responsif
+        async function menuAction(action) {
+            const ctxMenu = document.getElementById('songContextMenu');
+            ctxMenu.style.display = 'none'; // Tutup menu langsung
 
-            if(action === 'like') {
+            // ============================================
+            // 1. ACTION: ADD TO QUEUE
+            // ============================================
+            if (action === 'queue') {
+                // KASUS A: Lagu dari YouTube Search (Belum di DB)
+                if (activeYoutubeData) {
+                    const ytSong = {
+                        id: "TEMP_" + activeYoutubeData.id, // ID Sementara
+                        title: activeYoutubeData.title,
+                        artist: activeYoutubeData.author,
+                        cover: activeYoutubeData.thumbnail,
+                        url: '/Music/StreamYoutubeId?videoId=' + activeYoutubeData.id,
+                        element: null // Tidak ada elemen DOM fisik
+                    };
+                    playlist.push(ytSong);
+                    renderQueueUI();
+                    alert("Added to queue");
+                }
+                // KASUS B: Lagu Lokal (Sudah di DB)
+                else {
+                    // Cari elemen lagu di halaman aktif (logic lama)
+                    const songRow = document.querySelector(`.song-list-item[data-id='${activeSongId}']`);
+                    if(songRow) {
+                        const songData = {
+                            id: songRow.getAttribute('data-id'),
+                            title: songRow.getAttribute('data-title'),
+                            artist: songRow.getAttribute('data-artist'),
+                            cover: songRow.getAttribute('data-cover'),
+                            url: songRow.getAttribute('data-url'),
+                            element: songRow
+                        };
+                        playlist.push(songData);
+                        renderQueueUI();
+                        alert("Added to queue");
+                    }
+                }
+                return;
+            }
+
+            // ============================================
+            // 2. ACTION: LIKE (SAVE TO LIKED SONGS)
+            // ============================================
+            if (action === 'like') {
+
+                // KASUS A: Jika lagu ini dari YouTube, SIMPAN DULU ke Database!
+                if (activeYoutubeData) {
+                    try {
+                        // Panggil fungsi helper import (Pastikan fungsi importYoutubeToDb sudah ada di script)
+                        const newId = await importYoutubeToDb(activeYoutubeData);
+
+                        if (newId) {
+                            activeSongId = newId; // Update ID menjadi ID Database
+                            activeYoutubeData = null; // Reset data YouTube (karena sekarang sudah jadi data lokal)
+                        } else {
+                            return; // Gagal import
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        alert("Gagal menyimpan lagu ke library.");
+                        return;
+                    }
+                }
+
+                // KASUS B: Proses Like Normal (Lokal / Sudah Ter-import)
                 activeSongIsLiked = !activeSongIsLiked;
-                // Cari elemen Baris Lagu & Tombol Titik Tiga
+
+                // Update Tampilan UI (Hanya jika elemennya ada di layar saat ini)
                 const songRow = document.querySelector(`.song-list-item[data-id='${activeSongId}']`);
                 const btnInList = songRow ? songRow.querySelector('.btn-more') : null;
 
-                // Update Klik Kanan (di baris lagu)
                 if(songRow) {
                     songRow.setAttribute('oncontextmenu', `openSongMenu(event, ${activeSongId}, ${activeSongIsLiked})`);
                 }
-
-                // Update Klik Kiri (di tombol titik tiga)
                 if(btnInList) {
                     btnInList.setAttribute('onclick', `openSongMenu(event, ${activeSongId}, ${activeSongIsLiked})`);
                 }
 
-                // 3. Panggil API
+                // Panggil API Toggle Like
                 fetch('/Music/ToggleLike?id=' + activeSongId, { method: 'POST' })
                     .then(res => {
                         if(!res.ok) alert("Error syncing like");
                     });
 
-                // 4. Khusus jika sedang di halaman "Liked Songs", refresh agar lagu hilang dari list
+                // Khusus halaman Liked Songs: Refresh jika di-unlike agar hilang dari list
                 const currentUrl = window.location.href;
-                if(currentUrl.includes("mode=Liked")) loadPage(currentUrl);
-            }
-            else if (action === 'queue') {
-                // Add to Queue Client Side
-                // Cari elemen lagu di halaman aktif (bisa dari Index atau Details)
-                const songRow = document.querySelector(`.song-list-item[data-id='${activeSongId}']`);
-                if(songRow) {
-                    const songData = {
-                        id: songRow.getAttribute('data-id'),
-                        title: songRow.getAttribute('data-title'),
-                        artist: songRow.getAttribute('data-artist'),
-                        cover: songRow.getAttribute('data-cover'),
-                        url: songRow.getAttribute('data-url'),
-                        element: songRow
-                    };
-                    playlist.push(songData); // Push ke variabel playlist global di _Layout
-                    renderQueueUI(); // Render ulang drawer
-                    alert("Added to queue");
+                if(currentUrl.includes("mode=Liked") && !activeSongIsLiked) {
+                     loadPage(currentUrl);
+                }
+                // Khusus YouTube Search: Beri notifikasi visual
+                else if (!songRow) {
+                     alert(activeSongIsLiked ? "Saved to Liked Songs" : "Removed from Liked Songs");
                 }
             }
+
+            // ============================================
+            // 3. ACTION: REMOVE (FROM PLAYLIST)
+            // ============================================
             else if (action === 'remove') {
-                // Trigger logic remove di Details.cshtml (nanti kita sesuaikan Details)
-                // Karena logic remove spesifik playlist ID, kita butuh helper function di Details.
                 if(typeof removeFromPlaylistContext === 'function') {
                     removeFromPlaylistContext(activeSongId);
                 }
             }
         }
 
-        function addToPlaylist(pid) {
+        async function addToPlaylist(playlistId) {
+            // Jika ini lagu YouTube, simpan dulu!
+            if (activeYoutubeData) {
+                try {
+                    const newId = await importYoutubeToDb(activeYoutubeData);
+                    if(newId) {
+                        activeSongId = newId;
+                        activeYoutubeData = null; // Reset
+                    } else {
+                        return;
+                    }
+                } catch (e) {
+                    alert("Gagal import lagu");
+                    return;
+                }
+            }
+
+            // Lanjut ke logic Add Playlist normal
             let fd = new URLSearchParams();
-            fd.append('playlistId', pid);
+            fd.append('playlistId', playlistId);
             fd.append('songIds', activeSongId);
+
             fetch('/Playlist/AddSongsToPlaylist', { method: 'POST', body: fd })
                 .then(res => {
-                    if(res.ok) { alert("Added to playlist!"); ctxMenu.style.display = 'none'; }
+                    if(res.ok) {
+                        alert("Added to playlist!");
+                        document.getElementById('songContextMenu').style.display = 'none';
+                    }
                 });
         }
 
@@ -1645,6 +1712,105 @@
                 if(input) input.value = searchParam;
             }
         });
+
+                // Fungsi Khusus untuk membuka Menu dari YouTube
+        function openYoutubeMenu(event, itemData) {
+            event.preventDefault(); // Mencegah menu browser muncul
+            event.stopPropagation();
+
+            // 1. Simpan data YouTube ke variabel global sementara
+            activeYoutubeData = itemData;
+
+            // Reset activeSongId agar sistem tahu kita sedang TIDAK menggunakan lagu DB
+            activeSongId = 0;
+            activeSongIsLiked = false; // Default false karena belum ada di DB
+
+            // 2. Atur Tampilan Menu
+            // Sembunyikan tombol Remove (karena ini bukan di dalam playlist)
+            document.getElementById('ctxBtnRemove').style.display = 'none';
+            document.getElementById('ctxSepRemove').style.display = 'none';
+
+            // Update Text Like (Default: Save to Liked)
+            updateLikeMenuItem();
+
+            // Reset Submenu Playlist
+            document.getElementById('ctxPlaylistItems').innerHTML =
+                `<div style="padding:8px 12px; color:#6F7A95; font-size:12px;">Hover to load...</div>`;
+
+            // --- BAGIAN YANG DIUBAH (HANYA INI) ---
+            // Panggil fungsi helper positioning yang baru
+            setMenuPosition(event.clientX, event.clientY);
+
+            // Submenu flip logic
+            const submenu = document.getElementById('ctxPlaylistSubmenu');
+            const distRight = window.innerWidth - x - menuWidth;
+            if (distRight < 220) submenu.classList.add('open-left');
+            else submenu.classList.remove('open-left');
+        }
+
+        // Fungsi untuk menyimpan data YT ke DB secara background dan mengembalikan ID-nya
+        function importYoutubeToDb(ytItem) {
+            return new Promise((resolve, reject) => {
+                // Konversi durasi string ke detik
+                let parts = ytItem.duration.split(':');
+                let seconds = 0;
+                if (parts.length === 2) { seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]); }
+                else if (parts.length === 3) { seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]); }
+
+                const formData = new FormData();
+                formData.append('videoId', ytItem.id);
+                formData.append('title', ytItem.title);
+                formData.append('author', ytItem.author);
+                formData.append('durationSec', seconds);
+
+                fetch('/Music/AddYoutubeToLibrary', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        // Backend harus mengembalikan { message: "...", id: 123 }
+                        if (data.id) {
+                            resolve(data.id);
+                        } else {
+                            reject("ID tidak dikembalikan server");
+                        }
+                    })
+                    .catch(err => reject(err));
+            });
+        }
+
+                // --- HELPER POSITIONING MENU (PERBAIKAN) ---
+        function setMenuPosition(clientX, clientY) {
+            const ctxMenu = document.getElementById('songContextMenu');
+
+            // 1. Reset posisi & Tampilkan transparan dulu untuk mengukur tinggi asli
+            ctxMenu.style.opacity = '0';
+            ctxMenu.style.display = 'block';
+
+            // 2. Ambil Lebar & Tinggi Asli elemen (Real-time)
+            const width = ctxMenu.offsetWidth;
+            const height = ctxMenu.offsetHeight; // Ini kuncinya! (misal: 150px, bukan 300px)
+
+            let x = clientX;
+            let y = clientY;
+
+            // 3. Logika FLIP (Pembalik)
+
+            // Jika mentok kanan -> geser ke kiri kursor
+            if (x + width > window.innerWidth) {
+                x -= width;
+            }
+
+            // Jika mentok bawah -> geser ke atas kursor (Flip Up)
+            if (y + height > window.innerHeight) {
+                y -= height;
+            }
+
+            // 4. Terapkan Posisi Akhir
+            ctxMenu.style.left = `${x}px`;
+            ctxMenu.style.top = `${y}px`;
+
+            // 5. Munculkan visualnya
+            ctxMenu.style.opacity = '1';
+        }
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
