@@ -351,5 +351,22 @@ namespace MusicPlayerWeb.Controllers
             _context.SaveChanges();
             return Ok();
         }
+
+        // GET: /Playlist/GetUserPlaylists
+        [HttpGet]
+        public IActionResult GetUserPlaylists()
+        {
+            var playlists = _context.Playlists
+                .OrderBy(p => p.Name)
+                .Select(p => new {
+                    id = p.Id,
+                    name = p.Name,
+                    // Opsional: Cek jumlah lagu 
+                    count = p.PlaylistSongs.Count
+                })
+                .ToList();
+
+            return Json(playlists);
+        }
     }
 }

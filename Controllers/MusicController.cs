@@ -350,5 +350,16 @@ namespace MusicPlayerWeb.Controllers
             return View(artist);
         }
 
+        [HttpPost]
+        public IActionResult ToggleLike(int id)
+        {
+            var song = _context.Songs.Find(id);
+            if (song == null) return NotFound();
+
+            song.IsLiked = !song.IsLiked;
+            _context.SaveChanges();
+
+            return Ok(new { isLiked = song.IsLiked });
+        }
     }
 }

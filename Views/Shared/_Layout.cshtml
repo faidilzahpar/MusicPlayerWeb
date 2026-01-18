@@ -554,6 +554,123 @@
             cursor: pointer;
         }
 
+        .custom-context-menu {
+            display: none;
+            position: fixed; /* Fixed agar akurat ikut layar */
+            z-index: 9999;
+            background-color: #1F2940;
+            border: 1px solid #3E4C6E;
+            border-radius: 8px;
+            padding: 4px 0;
+            min-width: 220px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+
+        .ctx-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            color: #E0E0E0;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.1s;
+            text-decoration: none;
+            position: relative;
+        }
+
+            .ctx-item:hover {
+                background-color: #3E4C6E;
+                color: white;
+            }
+
+        .ctx-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 12px;
+            fill: currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ctx-text {
+            flex-grow: 1;
+        }
+
+        .ctx-arrow {
+            width: 10px;
+            height: 10px;
+            fill: #AEB7D3;
+        }
+
+        .ctx-separator {
+            height: 1px;
+            background-color: #3E4C6E;
+            margin: 6px 0;
+        }
+
+        .ctx-submenu {
+            display: none;
+            position: absolute;
+            left: 100%;
+            top: -4px;
+            background-color: #1F2940;
+            border: 1px solid #3E4C6E;
+            border-radius: 8px;
+            padding: 4px 0;
+            min-width: 200px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+            /* Logic flip kiri jika mentok kanan */
+            .ctx-submenu.open-left {
+                left: auto;
+                right: 100%;
+            }
+
+        .ctx-item.has-submenu:hover .ctx-submenu {
+            display: block;
+        }
+
+        .ctx-search-container {
+            padding: 8px 12px;
+            border-bottom: 1px solid #3E4C6E;
+            margin-bottom: 4px;
+        }
+
+        .ctx-search-input {
+            background-color: #151C30;
+            border: 1px solid #3E4C6E;
+            color: white;
+            border-radius: 4px;
+            padding: 6px 10px 6px 30px;
+            width: 100%;
+            font-size: 12px;
+            outline: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236F7A95'%3E%3Cpath d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: 14px;
+            background-position: 8px center;
+        }
+
+            .ctx-search-input:focus {
+                border-color: #5CD1FF;
+            }
+
+        .ctx-playlist-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+            .ctx-playlist-list::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .ctx-playlist-list::-webkit-scrollbar-thumb {
+                background: #3E4C6E;
+                border-radius: 2px;
+            }
     </style>
 </head>
 <body>
@@ -743,6 +860,46 @@
     </div>
 
     <audio id="globalAudio" ontimeupdate="updateGlobalProgress()" onended="globalAudioEnded()"></audio>
+
+    <div id="songContextMenu" class="custom-context-menu">
+        <div class="ctx-item" onclick="menuAction('queue')">
+            <div class="ctx-icon">
+                <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;">
+                    <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z" />
+                </svg>
+            </div>
+            <span class="ctx-text">Add to Queue</span>
+        </div>
+        <div class="ctx-item" id="ctxBtnLike" onclick="menuAction('like')">
+            <div class="ctx-icon" id="ctxIconLike">
+                <svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.51 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 3.01-3.14 5.74-7.9 10.05z" /></svg>
+            </div>
+            <span class="ctx-text" id="ctxTextLike">Save to Liked Songs</span>
+        </div>
+        <div class="ctx-item has-submenu" onmouseenter="loadUserPlaylists()">
+            <div class="ctx-icon"><svg viewBox="0 0 24 24"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" /></svg></div>
+            <span class="ctx-text">Add to playlist</span>
+            <svg class="ctx-arrow" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" /></svg>
+            <div class="ctx-submenu" id="ctxPlaylistSubmenu">
+                <div class="ctx-search-container">
+                    <input type="text" class="ctx-search-input" placeholder="Find a playlist" onkeyup="filterPlaylists(this.value)" onclick="event.stopPropagation()">
+                </div>
+                <div class="ctx-item" onclick="createNewPlaylistFromMenu()">
+                    <div class="ctx-icon" style="font-size: 18px; font-weight: bold;">+</div>
+                    <span class="ctx-text">New playlist</span>
+                </div>
+                <div class="ctx-separator"></div>
+                <div id="ctxPlaylistItems" class="ctx-playlist-list">
+                    <div style="padding:8px 12px; color:#6F7A95; font-size:12px;">Hover to load...</div>
+                </div>
+            </div>
+        </div>
+        <div class="ctx-separator" id="ctxSepRemove" style="display:none;"></div>
+        <div class="ctx-item" id="ctxBtnRemove" style="display:none;" onclick="menuAction('remove')">
+            <div class="ctx-icon"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg></div>
+            <span class="ctx-text">Remove from Playlist</span>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -1228,6 +1385,193 @@
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             });
+        }
+
+        let activeSongId = 0;
+        let activeSongIsLiked = false;
+        let cachedPlaylists = [];
+        const ctxMenu = document.getElementById('songContextMenu');
+
+        // Fungsi Global untuk membuka menu (bisa dipanggil dari Index, Details, dll)
+        function openSongMenu(event, songId, isLiked, showRemove = false) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            activeSongId = songId;
+            activeSongIsLiked = isLiked;
+
+            // Handle Tombol Remove (khusus halaman Playlist Detail)
+            const removeBtn = document.getElementById('ctxBtnRemove');
+            const removeSep = document.getElementById('ctxSepRemove');
+            if(showRemove) {
+                removeBtn.style.display = 'flex';
+                removeSep.style.display = 'block';
+            } else {
+                removeBtn.style.display = 'none';
+                removeSep.style.display = 'none';
+            }
+
+            // Update UI Like
+            updateLikeMenuItem();
+
+            // Reset Submenu
+            document.getElementById('ctxPlaylistItems').innerHTML =
+                `<div style="padding:8px 12px; color:#6F7A95; font-size:12px;">Hover to load...</div>`;
+
+            // Positioning Logic
+            let x = event.clientX;
+            let y = event.clientY;
+            const menuWidth = 220;
+            const menuHeight = 300;
+
+            if (x + menuWidth > window.innerWidth) x -= menuWidth;
+            if (y + menuHeight > window.innerHeight) y -= menuHeight;
+
+            ctxMenu.style.top = `${y}px`;
+            ctxMenu.style.left = `${x}px`;
+            ctxMenu.style.display = 'block';
+
+            // Submenu Flip Logic
+            const submenu = document.getElementById('ctxPlaylistSubmenu');
+            const distRight = window.innerWidth - x - menuWidth;
+            if (distRight < 220) submenu.classList.add('open-left');
+            else submenu.classList.remove('open-left');
+        }
+
+        // Tutup menu saat klik luar
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.ctx-search-input')) return;
+            ctxMenu.style.display = 'none';
+        });
+
+        // Load Playlist (Submenu)
+        function loadUserPlaylists() {
+            const listContainer = document.getElementById('ctxPlaylistItems');
+            fetch('/Playlist/GetUserPlaylists')
+                .then(res => res.json())
+                .then(data => {
+                    cachedPlaylists = data;
+                    renderPlaylists(data);
+                })
+                .catch(() => listContainer.innerHTML = '<div style="padding:8px 12px; color:red">Error</div>');
+        }
+
+        function renderPlaylists(data) {
+            let html = '';
+            if(data.length === 0) html = '<div style="padding:8px 12px; color:#aaa; font-size:12px;">No playlists</div>';
+            else {
+                data.forEach(p => {
+                    html += `<div class="ctx-item" onclick="addToPlaylist(${p.id})">
+                                <span class="ctx-text">${p.name}</span>
+                             </div>`;
+                });
+            }
+            document.getElementById('ctxPlaylistItems').innerHTML = html;
+        }
+
+        function filterPlaylists(val) {
+            if(!val) renderPlaylists(cachedPlaylists);
+            else {
+                const filtered = cachedPlaylists.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
+                renderPlaylists(filtered);
+            }
+        }
+
+        // Actions
+        function updateLikeMenuItem() {
+            const iconDiv = document.getElementById('ctxIconLike');
+            const textSpan = document.getElementById('ctxTextLike');
+            if (activeSongIsLiked) {
+                iconDiv.innerHTML = `<svg viewBox="0 0 24 24" style="fill:white"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+                textSpan.innerText = "Remove from Liked Songs";
+            } else {
+                iconDiv.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.51 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 3.01-3.14 5.74-7.9 10.05z"/></svg>`;
+                textSpan.innerText = "Save to Liked Songs";
+            }
+        }
+
+        function menuAction(action) {
+            ctxMenu.style.display = 'none'; // Tutup menu langsung biar responsif
+
+            if(action === 'like') {
+                activeSongIsLiked = !activeSongIsLiked;
+                // Cari elemen Baris Lagu & Tombol Titik Tiga
+                const songRow = document.querySelector(`.song-list-item[data-id='${activeSongId}']`);
+                const btnInList = songRow ? songRow.querySelector('.btn-more') : null;
+
+                // Update Klik Kanan (di baris lagu)
+                if(songRow) {
+                    songRow.setAttribute('oncontextmenu', `openSongMenu(event, ${activeSongId}, ${activeSongIsLiked})`);
+                }
+
+                // Update Klik Kiri (di tombol titik tiga)
+                if(btnInList) {
+                    btnInList.setAttribute('onclick', `openSongMenu(event, ${activeSongId}, ${activeSongIsLiked})`);
+                }
+
+                // 3. Panggil API
+                fetch('/Music/ToggleLike?id=' + activeSongId, { method: 'POST' })
+                    .then(res => {
+                        if(!res.ok) alert("Error syncing like");
+                    });
+
+                // 4. Khusus jika sedang di halaman "Liked Songs", refresh agar lagu hilang dari list
+                const currentUrl = window.location.href;
+                if(currentUrl.includes("mode=Liked")) loadPage(currentUrl);
+            }
+            else if (action === 'queue') {
+                // Add to Queue Client Side
+                // Cari elemen lagu di halaman aktif (bisa dari Index atau Details)
+                const songRow = document.querySelector(`.song-list-item[data-id='${activeSongId}']`);
+                if(songRow) {
+                    const songData = {
+                        id: songRow.getAttribute('data-id'),
+                        title: songRow.getAttribute('data-title'),
+                        artist: songRow.getAttribute('data-artist'),
+                        cover: songRow.getAttribute('data-cover'),
+                        url: songRow.getAttribute('data-url'),
+                        element: songRow
+                    };
+                    playlist.push(songData); // Push ke variabel playlist global di _Layout
+                    renderQueueUI(); // Render ulang drawer
+                    alert("Added to queue");
+                }
+            }
+            else if (action === 'remove') {
+                // Trigger logic remove di Details.cshtml (nanti kita sesuaikan Details)
+                // Karena logic remove spesifik playlist ID, kita butuh helper function di Details.
+                if(typeof removeFromPlaylistContext === 'function') {
+                    removeFromPlaylistContext(activeSongId);
+                }
+            }
+        }
+
+        function addToPlaylist(pid) {
+            let fd = new URLSearchParams();
+            fd.append('playlistId', pid);
+            fd.append('songIds', activeSongId);
+            fetch('/Playlist/AddSongsToPlaylist', { method: 'POST', body: fd })
+                .then(res => {
+                    if(res.ok) { alert("Added to playlist!"); ctxMenu.style.display = 'none'; }
+                });
+        }
+
+        function createNewPlaylistFromMenu() {
+            let name = prompt("New Playlist Name:");
+            if (name) {
+                let fd = new FormData();
+                fd.append('name', name);
+                fetch('/Playlist/Create', { method: 'POST', body: fd })
+                    .then(() => {
+                        fetch('/Playlist/GetUserPlaylists')
+                            .then(r => r.json())
+                            .then(list => {
+                                // Cari ID playlist baru dan langsung add lagu
+                                const newPl = list.filter(p => p.name === name).sort((a,b) => b.id - a.id)[0];
+                                if(newPl) addToPlaylist(newPl.id);
+                            });
+                    });
+            }
         }
     </script>
     @await RenderSectionAsync("Scripts", required: false)

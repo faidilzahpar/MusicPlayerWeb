@@ -1,6 +1,5 @@
 ﻿@model IEnumerable<MusicPlayerWeb.Models.Song>
 @{
-    // Menggunakan   yang baru kita buat
     ViewData["Title"] = "All Songs";
 }
 
@@ -9,26 +8,24 @@
         display: grid;
         grid-template-columns: 65px 1fr 100px 40px;
         align-items: center;
-        padding: 10px 0; /* WPF Padding="10" */
+        padding: 10px 0;
         margin-bottom: 8px;
-        background-color: #2A3550; /* WPF Background Default */
-
+        background-color: #2A3550;
         border-radius: 8px;
         cursor: pointer;
         transition: background 0.2s;
         border-left: 2px solid transparent;
     }
 
-    .song-list-item:hover {
-        background-color: #36405F;
-    }
+        .song-list-item:hover {
+            background-color: #36405F;
+        }
 
-    .song-list-item.active {
-        background-color: #3E4C6E; /* Background Selected */
-        border-left-color: #5CD1FF; /* Garis Biru di Kiri */
-    }
+        .song-list-item.active {
+            background-color: #3E4C6E;
+            border-left-color: #5CD1FF;
+        }
 
-    /* Cover Box */
     .list-cover-box {
         width: 48px;
         height: 48px;
@@ -44,7 +41,6 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
 
-    /* Icon Placeholder (SVG Path from XAML) */
     .list-placeholder-icon {
         width: 22px;
         height: 22px;
@@ -52,7 +48,6 @@
         opacity: 0.7;
     }
 
-    /* Text Styles */
     .list-title {
         color: white;
         font-weight: 600;
@@ -81,7 +76,6 @@
         margin-right: 20px;
     }
 
-    /* Context Menu Button */
     .btn-more {
         background: transparent;
         border: none;
@@ -99,20 +93,18 @@
             color: white;
         }
 
-    /* Header Styling */
     .page-header {
         display: flex;
         align-items: center;
-        padding: 20px 10px; /* Padding atas bawah & kiri */
-        margin: 0; /* Hilangkan margin agar menempel */
+        padding: 20px 10px;
+        margin: 0;
         position: sticky;
-        top: -16px; /* Offset negatif untuk melawan padding container utama (py-3 bootstrap) */
-        /* 3. VISUAL */
-        z-index: 50; /* Pastikan dia di layer atas, menutupi lagu yang di-scroll */
-        background-color: #1F2945; /* PENTING: Warna background harus sama dengan window agar tidak transparan */
-        margin-left: -24px; /* Melawan px-4 container */
-        margin-right: -24px; /* Melawan px-4 container */
-        padding-left: 34px; /* Mengembalikan padding teks */
+        top: -16px;
+        z-index: 50;
+        background-color: #1F2945;
+        margin-left: -24px;
+        margin-right: -24px;
+        padding-left: 34px;
     }
 
     .btn-back {
@@ -126,7 +118,6 @@
 </style>
 
 <div class="page-header">
-    <button class="btn-back">⬅</button>
     <h2 style="font-size: 22px; font-weight: bold; color: white; margin: 0;">All Songs</h2>
 </div>
 
@@ -141,14 +132,13 @@
                  data-artist="@(song.Artist?.Name ?? "Unknown")"
                  data-cover="/Music/GetAlbumArt/@song.Id"
                  data-url="/Music/PlayStream?id=@song.Id"
-                 onclick="playFromQueue(this)">
-
+                 onclick="playFromQueue(this)"
+                 oncontextmenu="openSongMenu(event, @song.Id, @(song.IsLiked.ToString().ToLower()))">
                 <div style="padding-left: 10px;">
                     <div class="list-cover-box">
                         <img src="/Music/GetAlbumArt/@song.Id"
                              style="width: 100%; height: 100%; object-fit: cover;"
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-
                         <svg class="list-placeholder-icon" viewBox="0 0 24 24" style="display:none;">
                             <path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z" />
                         </svg>
@@ -165,7 +155,7 @@
                 </div>
 
                 <div>
-                    <button class="btn-more" onclick="event.stopPropagation(); alert('Context menu placeholder');">⋮</button>
+                    <button class="btn-more" onclick="openSongMenu(event, @song.Id, @(song.IsLiked.ToString().ToLower()))">⋮</button>
                 </div>
             </div>
         }
@@ -178,9 +168,7 @@
 
 <script>
     function highlightSong(element) {
-        // Hapus class 'active' dari semua lagu
         document.querySelectorAll('.song-list-item').forEach(el => el.classList.remove('active'));
-        // Tambahkan class 'active' ke lagu yang diklik
         element.classList.add('active');
     }
 </script>
