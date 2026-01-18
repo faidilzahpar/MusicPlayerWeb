@@ -684,7 +684,9 @@
 
             <div class="search-box">
                 <span style="color: #AEB7D3; margin-right: 10px;">🔍</span>
-                <input type="text" placeholder="Search songs..." />
+                <input type="text" id="sidebarSearchInput" placeholder="Search songs..."
+                       onkeyup="handleSidebarSearch(this.value)"
+                       onkeydown="handleSidebarEnter(event, this.value)" />
             </div>
 
             <div class="sidebar-content">
@@ -709,7 +711,7 @@
                     <svg viewBox="0 0 24 24" style="fill:red !important;"><path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z" /></svg>
                     YouTube
                 </a>
-                <a href="/Music/Index?mode=Albums" class="nav-btn @GetActiveClass("Albums")">
+                <a href="/Music/Albums" class="nav-btn @(ViewContext.RouteData.Values["Action"]?.ToString() == "Albums" || ViewContext.RouteData.Values["Action"]?.ToString() == "AlbumDetails" ? "active" : "")">
                     <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" /></svg>
                     Albums
                 </a>
@@ -1282,27 +1284,50 @@
 
             // Update tampilan tombol aktif di sidebar
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            // Cari link yang href-nya mirip dengan url ini dan aktifkan
             const activeLink = document.querySelector(`.nav-btn[href="${url}"]`);
             if(activeLink) activeLink.classList.add('active');
 
             // Fetch konten baru
             fetch(url, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' // Tandai sebagai AJAX
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
             .then(response => response.text())
             .then(html => {
-                // Ganti isi .main-content dengan HTML baru
                 const contentDiv = document.querySelector('.main-content');
 
-                // Efek Fade Out dikit biar halus
+                // Efek Fade Out
                 contentDiv.style.opacity = 0;
 
                 setTimeout(() => {
                     contentDiv.innerHTML = html;
                     contentDiv.style.opacity = 1;
+
+                    // --- [FIX PENTING] ---
+                    // Jalankan ulang script yang ada di dalam HTML baru (Search, Modal, dll)
+                    contentDiv.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+
+                        // Salin semua atribut (src, type, dll)
+                        Array.from(oldScript.attributes).forEach(attr => {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+
+                        // Salin isi script
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+
+                        // Ganti script lama (mati) dengan script baru (hidup)
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+
+                    // Fitur Tambahan: Auto Focus ke Search Bar jika ada isinya (biar kursor di akhir)
+                    const searchBox = contentDiv.querySelector(".search-input-group input");
+                    if (searchBox && searchBox.value) {
+                         const val = searchBox.value;
+                         searchBox.focus();
+                         searchBox.value = '';
+                         searchBox.value = val;
+                    }
+
                 }, 150);
             })
             .catch(err => console.error('Gagal load halaman:', err));
@@ -1575,6 +1600,51 @@
                     });
             }
         }
+
+        // --- FITUR SEARCH SIDEBAR (HYBRID) ---
+
+        // 1. Live Filter (Mencari lagu di dalam halaman tersebut)
+        function handleSidebarSearch(query) {
+            const val = query.toLowerCase();
+
+            // Ambil semua elemen lagu yang sedang tampil (di Playlist, Artist, atau All Songs)
+            const songs = document.querySelectorAll('.song-list-item');
+
+            if (songs.length > 0) {
+                songs.forEach(el => {
+                    // Ambil data Judul dan Artis dari atribut data
+                    const title = el.getAttribute('data-title').toLowerCase();
+                    const artist = el.getAttribute('data-artist').toLowerCase();
+
+                    // Cek apakah cocok
+                    if (title.includes(val) || artist.includes(val)) {
+                        el.style.display = ''; // Tampilkan
+                    } else {
+                        el.style.display = 'none'; // Sembunyikan
+                    }
+                });
+            }
+        }
+
+        // 2. Global Search (Saat tekan Enter)
+        // Berguna jika lagu yang dicari tidak ada di halaman ini, user bisa tekan Enter untuk cari ke seluruh Library
+        function handleSidebarEnter(e, query) {
+            if (e.key === 'Enter') {
+                const url = '/Music/Index?mode=Songs&search=' + encodeURIComponent(query);
+                loadPage(url);
+            }
+        }
+
+        // 3. Sinkronisasi Input (Opsional)
+        // Agar saat pindah halaman, isi search bar sesuai dengan kondisi URL
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            if(searchParam) {
+                const input = document.getElementById('sidebarSearchInput');
+                if(input) input.value = searchParam;
+            }
+        });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

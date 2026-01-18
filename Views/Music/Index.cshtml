@@ -124,7 +124,9 @@
 <div class="song-list-container">
     @if (Model != null)
     {
-        @foreach (var song in Model)
+        @foreach (var song in Model
+            .GroupBy(s => new { s.Title, ArtistName = s.Artist != null ? s.Artist.Name : "Unknown" })
+            .Select(g => g.First()))
         {
             <div class="song-list-item"
                  data-id="@song.Id"

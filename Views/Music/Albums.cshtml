@@ -1,11 +1,11 @@
-﻿@model IEnumerable<MusicPlayerWeb.Models.Artist>
+﻿@model IEnumerable<MusicPlayerWeb.Models.Album>
 
 @{
-    ViewData["Title"] = "Artists";
+    ViewData["Title"] = "Albums";
 }
 
 <style>
-    /* --- HEADER AREA (Search Bar) --- */
+    /* --- HEADER AREA --- */
     .playlist-header-area {
         display: flex;
         justify-content: space-between;
@@ -13,6 +13,7 @@
         margin-bottom: 25px;
     }
 
+    /* Search Bar Custom */
     .search-input-group {
         position: relative;
         width: 300px;
@@ -43,7 +44,7 @@
         font-size: 14px;
     }
 
-    /* --- ARTIST CARD STYLE --- */
+    /* --- ALBUM CARD (Sama seperti Playlist Card) --- */
     .playlist-card {
         background-color: #1B2338;
         padding: 16px;
@@ -59,27 +60,48 @@
             background-color: #2A3550;
         }
 
+    /* --- COVER IMAGE (KOTAK) --- */
     .cover-container {
         width: 100%;
-        aspect-ratio: 1 / 1;
+        aspect-ratio: 1 / 1; /* Kotak Sempurna */
         border-radius: 4px;
         overflow: hidden;
         margin-bottom: 16px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         position: relative;
-        background-color: #2A3550;
+        background-color: #333;
+    }
+
+    /* Single Image */
+    .cover-single {
+        width: 100%;
+        height: 100%;
+    }
+
+        .cover-single img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    /* Placeholder */
+    .cover-placeholder {
+        width: 100%;
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
+        background-color: #2A3550;
+        color: #6F7A95;
     }
 
-    .artist-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 50%; /* Bulat khusus Artis */
-    }
+        .cover-placeholder svg {
+            width: 50%;
+            height: 50%;
+            fill: currentColor;
+        }
 
+    /* Text */
     .pl-title {
         color: white;
         font-weight: 700;
@@ -102,51 +124,49 @@
 <div class="playlist-header-area">
     <div class="search-input-group">
         <span class="search-icon">🔍</span>
-        <input type="text" id="artistSearch" placeholder="Search artists..."
-               value="@ViewBag.SearchQuery"
-               onkeydown="if(event.key === 'Enter') searchArtists(this.value)">
+        <input type="text" id="albumSearch" placeholder="Search albums..."
+               onkeydown="if(event.key === 'Enter') searchAlbums(this.value)">
     </div>
 </div>
 
 <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4">
-    @foreach (var artist in Model)
+    @foreach (var album in Model)
     {
-        var firstSong = artist.Songs.FirstOrDefault();
+        // Ambil lagu pertama untuk cover album
+        var firstSong = album.Songs.FirstOrDefault();
         var imgUrl = firstSong != null ? $"/Music/GetAlbumArt/{firstSong.Id}" : "";
 
         <div class="col">
-            <a href="/Music/ArtistDetails/@artist.Id" class="playlist-card ajax-link">
+            <a href="/Music/AlbumDetails/@album.Id" class="playlist-card ajax-link">
 
-                <div class="cover-container" style="background-color: transparent; box-shadow: none; position: relative;">
+                <div class="cover-container" style="position: relative; background-color: #2A3550;">
 
-                    <div class="artist-img shadow d-flex align-items-center justify-content-center"
-                         style="background-color: #2A3550; color: #6F7A95; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-                        <svg viewBox="0 0 24 24" style="width: 50%; height: 50%; fill: currentColor;">
-                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                    <div class="cover-placeholder"
+                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+                        <svg viewBox="0 0 24 24" style="width: 50%; height: 50%; fill: #6F7A95;">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" />
                         </svg>
                     </div>
 
                     @if (!string.IsNullOrEmpty(imgUrl))
                     {
                         <img src="@imgUrl"
-                             class="artist-img shadow"
                              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2;"
                              onerror="this.style.display='none';" />
                     }
                 </div>
 
-                <div class="pl-title" title="@artist.Name">@artist.Name</div>
-                <div class="pl-desc">@artist.Songs.GroupBy(s => s.Title).Count() songs</div>
+                <div class="pl-title">@album.Title</div>
+                <div class="pl-desc">@album.Artist.Name</div>
             </a>
         </div>
     }
 </div>
 
 <script>
-    function searchArtists(query) {
+    function searchAlbums(query) {
         // Encode query agar aman di URL
-        const url = '/Music/Artists?search=' + encodeURIComponent(query);
+        const url = '/Music/Albums?search=' + encodeURIComponent(query);
 
         // Gunakan loadPage dari _Layout jika tersedia (untuk SPA/AJAX)
         if (typeof loadPage === 'function') {
@@ -155,15 +175,4 @@
             window.location.href = url;
         }
     }
-
-    // Fokus kembali ke search bar setelah reload (UX)
-    document.addEventListener("DOMContentLoaded", function() {
-        var searchBox = document.getElementById("artistSearch");
-        if (searchBox && searchBox.value) {
-            searchBox.focus();
-            var val = searchBox.value;
-            searchBox.value = '';
-            searchBox.value = val;
-        }
-    });
 </script>

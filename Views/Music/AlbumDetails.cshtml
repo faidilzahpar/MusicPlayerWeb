@@ -1,8 +1,10 @@
-﻿@model MusicPlayerWeb.Models.Artist
+﻿@model MusicPlayerWeb.Models.Album
 
 @{
-    ViewData["Title"] = Model.Name;
-    int coverId = ViewBag.CoverSongId;
+    ViewData["Title"] = Model.Title;
+    // Gunakan lagu pertama untuk cover header
+    var firstSong = Model.Songs.FirstOrDefault();
+    int coverId = firstSong != null ? firstSong.Id : 0;
 }
 
 <style>
@@ -10,9 +12,9 @@
         display: grid;
         grid-template-columns: 65px 1fr 100px 40px;
         align-items: center;
-        padding: 10px 0; /* Sesuai padding desktop */
+        padding: 10px 0;
         margin-bottom: 8px;
-        background-color: #2A3550; /* Background default */
+        background-color: #2A3550;
         border-radius: 8px;
         cursor: pointer;
         transition: background 0.2s;
@@ -24,11 +26,11 @@
         }
 
         .song-list-item.active {
-            background-color: #3E4C6E; /* Background Selected */
-            border-left-color: #5CD1FF; /* Garis Biru di Kiri */
+            background-color: #3E4C6E;
+            border-left-color: #5CD1FF;
         }
 
-    /* Cover Box */
+    /* Cover Box (List) */
     .list-cover-box {
         width: 48px;
         height: 48px;
@@ -109,7 +111,7 @@
             <div class="song-list-container">
                 @if (Model.Songs != null && Model.Songs.Any())
                 {
-                    foreach (var song in Model.Songs.GroupBy(s => s.Title).Select(g => g.First()))
+                    foreach (var song in Model.Songs)
                     {
                         <div class="song-list-item"
                              data-id="@song.Id"
@@ -149,7 +151,7 @@
                 }
                 else
                 {
-                    <p class="text-secondary">No songs found for this artist.</p>
+                    <p class="text-secondary">No songs found for this album.</p>
                 }
             </div>
         </div>
@@ -157,18 +159,18 @@
         <div class="col-md-4 order-1 order-md-2 mb-4 mb-md-0">
             <div class="p-4 rounded-4 text-center sticky-top" style="background: linear-gradient(180deg, #2A3550 0%, #1F2945 100%); top: 20px;">
 
-                <div class="mx-auto mb-3 shadow-lg" style="width: 200px; height: 200px; border-radius: 50%; overflow: hidden;">
+                <div class="mx-auto mb-3 shadow-lg" style="width: 200px; height: 200px; border-radius: 8px; overflow: hidden;">
                     <img src="/Music/GetAlbumArt/@coverId"
                          style="width: 100%; height: 100%; object-fit: cover;"
                          onerror="this.src='https://via.placeholder.com/200?text=No+Image';" />
                 </div>
 
-                <h1 class="fw-bold text-white mb-1">@Model.Name</h1>
-                <p class="text-secondary mb-4">@Model.Songs.GroupBy(s => s.Title).Count() Songs</p>
+                <h1 class="fw-bold text-white mb-1">@Model.Title</h1>
+                <p class="text-secondary mb-4">@Model.Artist.Name • @Model.Songs.Count Songs</p>
 
-                <button class="btn rounded-pill px-5 py-2 fw-bold text-white shadow"
+                <button class="btn btn-primary rounded-pill px-5 py-2 fw-bold text-white shadow"
                         style="background-color: var(--player-bg); border: none; font-size: 16px;"
-                        onclick="playAllArtistSongs()">
+                        onclick="playAllAlbumSongs()">
                     ▶ Play All
                 </button>
             </div>
@@ -179,19 +181,14 @@
 
 <script>
     function highlightSong(element) {
-        // Hapus class 'active' dari semua lagu
         document.querySelectorAll('.song-list-item').forEach(el => el.classList.remove('active'));
-        // Tambahkan class 'active' ke lagu yang diklik
         element.classList.add('active');
     }
 
-    function playAllArtistSongs() {
-        // Cari elemen lagu pertama di halaman
+    // Fungsi Play All untuk Album (Menggunakan fungsi global playFromQueue)
+    function playAllAlbumSongs() {
         const firstSong = document.querySelector('.song-list-item');
-
         if (firstSong) {
-            // Panggil fungsi global yang ada di _Layout.cshtml
-            // Ini otomatis akan membuat antrian dari semua lagu yang terlihat di halaman ini
             playFromQueue(firstSong);
         }
     }

@@ -19,9 +19,7 @@ namespace MusicPlayerWeb.Controllers
         // ==========================================
         // 1. INDEX: Menampilkan Lagu & Folder Otomatis
         // ==========================================
-        // Controllers/MusicController.cs
-
-        public IActionResult Index(string filterFolder = null, string mode = "Songs")
+        public IActionResult Index(string filterFolder = null, string mode = "Songs", string search = null)
         {
             // 1. Ambil semua data
             var query = _context.Songs
@@ -41,41 +39,44 @@ namespace MusicPlayerWeb.Controllers
                 default: query = query.OrderBy(s => s.Title); break;
             }
 
+            // [BARU] LOGIKA SEARCH GLOBAL
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(s => s.Title.ToLower().Contains(search.ToLower())
+                                      || s.Artist.Name.ToLower().Contains(search.ToLower()));
+            }
+
             // 3. LOGIKA FILTER FOLDER
             if (!string.IsNullOrEmpty(filterFolder))
             {
-                // Filter berdasarkan folder path
                 query = query.Where(s => s.FilePath.Contains(filterFolder));
                 mode = "Folder";
             }
 
             var resultList = query.ToList();
 
-            // 4. SIAPKAN SIDEBAR (Folder List)
+            // 4. SIAPKAN SIDEBAR & VIEW BAG
             ViewBag.CurrentMode = mode;
             ViewBag.CurrentFolder = filterFolder;
+            ViewBag.SearchQuery = search; // Kirim balik query agar input tetap terisi
 
-            // Ambil Path Default Windows (My Music)
             string defaultPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyMusic);
-
-            // Ambil list folder dari database, TAPI KECUALIKAN path default (agar tidak double)
             var allPaths = _context.Songs.Select(s => s.FilePath).ToList();
             var folders = allPaths
                 .Select(p => Path.GetDirectoryName(p))
                 .Distinct()
-                .Where(p => !string.IsNullOrEmpty(p) && p != defaultPath) // <-- FIX DOUBLE DISINI
+                .Where(p => !string.IsNullOrEmpty(p) && p != defaultPath)
                 .Select(p => new { Path = p, Name = Path.GetFileName(p) })
                 .ToList();
-
             ViewBag.Folders = folders;
 
-            // 5. RETURN VIEW (AJAX vs Normal)
+            // 5. RETURN VIEW
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
-                return PartialView(resultList); // Balikin konten saja (Lagu jalan terus)
+                return PartialView(resultList);
             }
 
-            return View(resultList); // Balikin full page (Refresh browser)
+            return View(resultList);
         }
 
         // ==========================================
@@ -315,13 +316,22 @@ namespace MusicPlayerWeb.Controllers
         }
 
         // HALAMAN GRID ARTIS (Daftar semua artis)
-        public IActionResult Artists()
+        public IActionResult Artists(string search = "")
         {
-            // Ambil semua artis dan include Songs untuk menghitung jumlah lagu/ambil cover
-            var artists = _context.Artists
+            var query = _context.Artists
                 .Include(a => a.Songs)
-                .OrderBy(a => a.Name)
-                .ToList();
+                .AsQueryable();
+
+            // LOGIKA FILTER SEARCH
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(a => a.Name.ToLower().Contains(search.ToLower()));
+            }
+
+            var artists = query.OrderBy(a => a.Name).ToList();
+
+            // Kirim nilai search kembali ke View (untuk mengisi input box setelah reload)
+            ViewBag.SearchQuery = search;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return PartialView(artists);
@@ -360,6 +370,45 @@ namespace MusicPlayerWeb.Controllers
             _context.SaveChanges();
 
             return Ok(new { isLiked = song.IsLiked });
+        }
+
+        // GET: /Music/Albums
+        public IActionResult Albums(string search = "")
+        {
+            var query = _context.Albums
+                .Include(a => a.Artist)
+                .Include(a => a.Songs) // Penting untuk hitung jumlah lagu & ambil cover
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(a => a.Title.ToLower().Contains(search.ToLower())
+                                      || a.Artist.Name.ToLower().Contains(search.ToLower()));
+            }
+
+            var albums = query.OrderBy(a => a.Title).ToList();
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return PartialView(albums);
+
+            return View(albums);
+        }
+
+        // GET: /Music/AlbumDetails/5
+        public IActionResult AlbumDetails(int id)
+        {
+            var album = _context.Albums
+                .Include(a => a.Artist)
+                .Include(a => a.Songs)
+                .ThenInclude(s => s.Artist) // Include Artist di dalam lagu agar nama artis muncul di list lagu
+                .FirstOrDefault(a => a.Id == id);
+
+            if (album == null) return NotFound();
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return PartialView(album);
+
+            return View(album);
         }
     }
 }
