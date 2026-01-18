@@ -486,9 +486,14 @@ namespace MusicPlayerWeb.Controllers
         {
             // Cek duplikasi
             string ytPath = "YT:" + videoId;
-            if (_context.Songs.Any(s => s.FilePath == ytPath))
+
+            // --- PERBAIKAN DI SINI ---
+            // Cek apakah lagu sudah ada
+            var existingSong = _context.Songs.FirstOrDefault(s => s.FilePath == ytPath);
+            if (existingSong != null)
             {
-                return Ok(new { message = "Lagu sudah ada di library." });
+                // Tetap kembalikan ID lagu yang sudah ada agar Frontend bisa lanjut proses (Like/Add Playlist)
+                return Ok(new { message = "Lagu sudah ada di library.", id = existingSong.Id });
             }
 
             // Handle Artist (Cari atau Buat baru)

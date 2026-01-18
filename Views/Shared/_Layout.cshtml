@@ -1445,14 +1445,16 @@
             document.getElementById('ctxPlaylistItems').innerHTML =
                 `<div style="padding:8px 12px; color:#6F7A95; font-size:12px;">Hover to load...</div>`;
 
-            // --- BAGIAN YANG DIUBAH (HANYA INI) ---
-            // HAPUS kode perhitungan manual lama (x, y, menuWidth, menuHeight)
-            // GANTI dengan:
+            // 3. POSISI MENU (Helper)
             setMenuPosition(event.clientX, event.clientY);
 
-            // Submenu Flip Logic
+            // --- PERBAIKAN LOGIKA SUBMENU FLIP ---
+            const ctxMenu = document.getElementById('songContextMenu');
             const submenu = document.getElementById('ctxPlaylistSubmenu');
-            const distRight = window.innerWidth - x - menuWidth;
+
+            const rect = ctxMenu.getBoundingClientRect();
+            const distRight = window.innerWidth - rect.right;
+
             if (distRight < 220) submenu.classList.add('open-left');
             else submenu.classList.remove('open-left');
         }
@@ -1737,13 +1739,18 @@
             document.getElementById('ctxPlaylistItems').innerHTML =
                 `<div style="padding:8px 12px; color:#6F7A95; font-size:12px;">Hover to load...</div>`;
 
-            // --- BAGIAN YANG DIUBAH (HANYA INI) ---
-            // Panggil fungsi helper positioning yang baru
+            // 3. POSISI MENU (Helper)
             setMenuPosition(event.clientX, event.clientY);
 
-            // Submenu flip logic
+            // --- PERBAIKAN LOGIKA SUBMENU FLIP ---
+            const ctxMenu = document.getElementById('songContextMenu');
             const submenu = document.getElementById('ctxPlaylistSubmenu');
-            const distRight = window.innerWidth - x - menuWidth;
+
+            // Ambil posisi menu aktual dari layar
+            const rect = ctxMenu.getBoundingClientRect();
+            const distRight = window.innerWidth - rect.right; // Jarak sisa di kanan
+
+            // Jika sisa kanan kurang dari 220px, submenu muncul di kiri
             if (distRight < 220) submenu.classList.add('open-left');
             else submenu.classList.remove('open-left');
         }
