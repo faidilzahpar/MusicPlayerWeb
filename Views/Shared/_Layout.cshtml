@@ -1098,7 +1098,6 @@
                             ${isNowPlaying ? '🔊' : ''} </div>
 
                         <div style="text-align:center;">
-                            <button class="btn-more" style="background:transparent; border:none; color:#6F7A95; font-size:18px; cursor:pointer;" onclick="event.stopPropagation(); alert('Menu item ${index}')">⋮</button>
                         </div>
                     </div>
                 `;
@@ -1451,6 +1450,7 @@
             // --- PERBAIKAN LOGIKA SUBMENU FLIP ---
             const ctxMenu = document.getElementById('songContextMenu');
             const submenu = document.getElementById('ctxPlaylistSubmenu');
+
 
             const rect = ctxMenu.getBoundingClientRect();
             const distRight = window.innerWidth - rect.right;
